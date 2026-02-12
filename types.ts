@@ -7,6 +7,7 @@ export interface Project {
   description: string;
   gradient: string;
   link: string;
+  image?: string;
 }
 
 export interface Stat {
