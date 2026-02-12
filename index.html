@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="浅墨青言 - 资深艺术总监 & 可视化工程师个人作品集。擅长使用 AI、WebGL 和 React 构建沉浸式数字体验。" />
+    <meta name="keywords" content="Portfolio, Art Director, WebGL, Three.js, React, AI Design, 浅墨青言" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <title>个人作品集 | 幻彩几何矩阵</title>
+    
+    <!-- Using Tailwind CDN for simplicity in this setup, 
+         in a full enterprise setup we would use PostCSS build chain. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              cyan: {
+                400: '#22d3ee',
+                500: '#06b6d4',
+                900: '#164e63',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #020205;
+        color: #ffffff;
+        margin: 0;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(34, 211, 238, 0.3);
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(34, 211, 238, 0.5);
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .text-glow {
+        text-shadow: 0 0 15px rgba(34, 211, 238, 0.6);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "framer-motion": "https://esm.sh/framer-motion@^12.34.0",
+    "three": "https://esm.sh/three@^0.182.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
