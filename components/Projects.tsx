@@ -44,7 +44,7 @@ const PROJECTS: Project[] = [
     id: 5,
     title: "Project E - 语之笔写作辅导",
     category: "AI Education",
-    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学语文设计的“过程性写作”智能辅导系统。",
+    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学学生作文设计的“过程性写作”智能辅导系统。",
     gradient: "from-amber-900 to-orange-900",
     link: "https://yuzhibi.de5.net",
     image: "https://img.qianmo.de5.net/PicGo/QQ20260211-093033.gif"
