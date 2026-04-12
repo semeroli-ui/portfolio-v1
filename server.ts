@@ -89,16 +89,23 @@ async function startServer() {
   app.use(express.json());
   app.use(cookieParser());
 
-  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+  const JWT_SECRET = process.env.JWT_SECRET;
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
+  const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
+
+  if (process.env.NODE_ENV === 'production' && (!JWT_SECRET || !ADMIN_PASSWORD_HASH)) {
+    console.error('CRITICAL: JWT_SECRET and ADMIN_PASSWORD_HASH must be set in production!');
+    process.exit(1);
+  }
+
+  const effectiveSecret = JWT_SECRET || 'dev-secret-do-not-use-in-prod';
 
   // Auth Middleware
   const authenticate = (req: any, res: any, next: any) => {
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
     try {
-      jwt.verify(token, JWT_SECRET);
+      jwt.verify(token, effectiveSecret);
       next();
     } catch (err) {
       res.status(401).json({ error: 'Invalid token' });
@@ -106,11 +113,24 @@ async function startServer() {
   };
 
   // API Routes
-  app.post('/api/login', (req, res) => {
+  app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '24h' });
-      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    
+    // In dev mode, if hash isn't set, allow 'admin' as default
+    const isDevDefault = process.env.NODE_ENV !== 'production' && !ADMIN_PASSWORD_HASH && password === 'admin';
+    
+    const isValidPassword = ADMIN_PASSWORD_HASH 
+      ? await bcrypt.compare(password, ADMIN_PASSWORD_HASH)
+      : isDevDefault;
+
+    if (username === ADMIN_USERNAME && isValidPassword) {
+      const token = jwt.sign({ username }, effectiveSecret, { expiresIn: '24h' });
+      res.cookie('token', token, { 
+        httpOnly: true, 
+        secure: true, // Always secure for modern browsers/CF
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 
+      });
       return res.json({ success: true });
     }
     res.status(401).json({ error: 'Invalid credentials' });
