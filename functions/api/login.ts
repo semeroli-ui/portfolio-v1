@@ -1,5 +1,5 @@
 import { parse, serialize } from 'cookie';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import bcrypt from 'bcryptjs';
 
 interface Env {
@@ -27,7 +27,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const isValid = username === adminUsername && await bcrypt.compare(password, adminHash);
 
   if (isValid) {
-    const token = jwt.sign({ username }, jwtSecret, { expiresIn: '24h' });
+    const secret = new TextEncoder().encode(jwtSecret);
+    const token = await new jose.SignJWT({ username })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .sign(secret);
+
     const cookie = serialize('token', token, {
       httpOnly: true,
       secure: true,

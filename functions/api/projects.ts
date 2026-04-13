@@ -1,5 +1,5 @@
 import { parse } from 'cookie';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 interface Env {
   DB: KVNamespace;
@@ -81,13 +81,14 @@ async function getProjects(db: KVNamespace) {
   return JSON.parse(data);
 }
 
-function verifyAuth(request: Request, secret: string) {
+async function verifyAuth(request: Request, secret: string) {
   const cookieHeader = request.headers.get('Cookie') || '';
   const cookies = parse(cookieHeader);
   const token = cookies.token;
   if (!token) return false;
   try {
-    jwt.verify(token, secret);
+    const key = new TextEncoder().encode(secret);
+    await jose.jwtVerify(token, key);
     return true;
   } catch {
     return false;
@@ -103,7 +104,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
-  if (!verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
+  if (!await verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
 
   const projects = await getProjects(env.DB);
   const newProject = await request.json() as any;

@@ -1,5 +1,5 @@
 import { parse } from 'cookie';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 interface Env {
   JWT_SECRET: string;
@@ -16,7 +16,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    jwt.verify(token, env.JWT_SECRET);
+    const secret = new TextEncoder().encode(env.JWT_SECRET);
+    await jose.jwtVerify(token, secret);
     return new Response(JSON.stringify({ authenticated: true }), {
       headers: { 'Content-Type': 'application/json' }
     });

@@ -1,5 +1,5 @@
 import { parse } from 'cookie';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 interface Env {
   DB: KVNamespace;
@@ -11,13 +11,14 @@ async function getProjects(db: KVNamespace) {
   return data ? JSON.parse(data) : [];
 }
 
-function verifyAuth(request: Request, secret: string) {
+async function verifyAuth(request: Request, secret: string) {
   const cookieHeader = request.headers.get('Cookie') || '';
   const cookies = parse(cookieHeader);
   const token = cookies.token;
   if (!token) return false;
   try {
-    jwt.verify(token, secret);
+    const key = new TextEncoder().encode(secret);
+    await jose.jwtVerify(token, key);
     return true;
   } catch {
     return false;
@@ -26,7 +27,7 @@ function verifyAuth(request: Request, secret: string) {
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
-  if (!verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
+  if (!await verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
 
   const id = parseInt(params.id as string);
   const projects = await getProjects(env.DB);
@@ -45,7 +46,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
-  if (!verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
+  if (!await verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
 
   const id = parseInt(params.id as string);
   let projects = await getProjects(env.DB);
