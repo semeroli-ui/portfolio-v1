@@ -38,7 +38,7 @@ const INITIAL_PROJECTS = [
     id: 4,
     title: "Project D - 语枢 AI 备课助手",
     category: "EdTech",
-    description: "告别"深夜备课"！语枢 AI：让每一堂语文课都充满智慧与灵感。一款专为中国语文教育者打造的生产力工具——语枢 AI (Yushu AI)。",
+    description: "告别「深夜备课」！语枢 AI：让每一堂语文课都充满智慧与灵感。一款专为中国语文教育者打造的生产力工具——语枢 AI (Yushu AI)。",
     gradient: "from-emerald-900 to-teal-900",
     link: "https://aiyushu.de5.net",
     image: "https://img.qianmo.de5.net/PicGo/QQ20260212-151210.gif"
@@ -47,7 +47,7 @@ const INITIAL_PROJECTS = [
     id: 5,
     title: "Project E - 语之笔写作辅导",
     category: "AI Education",
-    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学语文设计的"过程性写作"智能辅导系统。",
+    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学语文设计的「过程性写作」智能辅导系统。",
     gradient: "from-amber-900 to-orange-900",
     link: "https://yuzhibi.de5.net",
     image: "https://img.qianmo.de5.net/PicGo/QQ20260211-093033.gif"
