@@ -1,27 +1,41 @@
 import { parse } from 'cookie';
-import * as jose from 'jose';
+import { verifyAccessToken } from '../../utils/refreshToken';
 
 interface Env {
   JWT_SECRET: string;
 }
 
+/**
+ * GET /api/auth/check
+ *
+ * Verifies the current access token.
+ * Returns { authenticated: true } if valid, 401 if not.
+ */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
+
+  if (!env.JWT_SECRET) {
+    return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const cookieHeader = request.headers.get('Cookie') || '';
   const cookies = parse(cookieHeader);
   const token = cookies.token;
 
   if (!token) {
-    return new Response(JSON.stringify({ authenticated: false }), { status: 401 });
+    return new Response(JSON.stringify({ authenticated: false, reason: 'no_token' }), { status: 401 });
   }
 
-  try {
-    const secret = new TextEncoder().encode(env.JWT_SECRET);
-    await jose.jwtVerify(token, secret);
-    return new Response(JSON.stringify({ authenticated: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch {
-    return new Response(JSON.stringify({ authenticated: false }), { status: 401 });
+  const username = await verifyAccessToken(token, env.JWT_SECRET);
+
+  if (!username) {
+    return new Response(JSON.stringify({ authenticated: false, reason: 'invalid_token' }), { status: 401 });
   }
+
+  return new Response(JSON.stringify({ authenticated: true, username }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

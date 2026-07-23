@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Edit2, Save, X, LogOut, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { Project } from '../types';
 
+/** Access token TTL in ms (1 hour). Refresh at 50 min to avoid edge-case expiry. */
+const TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
+
 export const AdminDashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +14,40 @@ export const AdminDashboard: React.FC = () => {
   const [editForm, setEditForm] = useState<Partial<Project>>({});
   const [isAdding, setIsAdding] = useState(false);
   const navigate = useNavigate();
+
+  // ── Auto token refresh ────────────────────────────────────────────
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+
+    const tryRefresh = async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', { method: 'POST' });
+        if (!res.ok) {
+          // Refresh token invalid or expired → force re-login
+          navigate('/login');
+        }
+      } catch {
+        // Network error – don't force logout; next request will catch it
+      }
+    };
+
+    // Refresh on mount (tab becomes active after being hidden)
+    tryRefresh();
+
+    // Periodic proactive refresh before access token expires
+    timer = setInterval(tryRefresh, TOKEN_REFRESH_INTERVAL);
+
+    // Also refresh when tab regains focus
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') tryRefresh();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     checkAuth();
@@ -21,7 +58,7 @@ export const AdminDashboard: React.FC = () => {
     try {
       const res = await fetch('/api/auth/check');
       if (!res.ok) navigate('/login');
-    } catch (err) {
+    } catch {
       navigate('/login');
     }
   };
@@ -29,6 +66,10 @@ export const AdminDashboard: React.FC = () => {
   const fetchProjects = async () => {
     try {
       const res = await fetch('/api/projects');
+      if (res.status === 401) {
+        navigate('/login');
+        return;
+      }
       const data = await res.json();
       setProjects(data);
     } catch (err) {
@@ -46,7 +87,7 @@ export const AdminDashboard: React.FC = () => {
   const handleSave = async (id?: number) => {
     const method = id ? 'PUT' : 'POST';
     const url = id ? `/api/projects/${id}` : '/api/projects';
-    
+
     try {
       const res = await fetch(url, {
         method,
@@ -115,11 +156,11 @@ export const AdminDashboard: React.FC = () => {
                 exit={{ opacity: 0, height: 0 }}
                 className="glass-card p-8 rounded-3xl border border-cyan-500/30 overflow-hidden"
               >
-                <ProjectForm 
-                  form={editForm} 
-                  onChange={setEditForm} 
-                  onSave={() => handleSave()} 
-                  onCancel={() => { setIsAdding(false); setEditForm({}); }} 
+                <ProjectForm
+                  form={editForm}
+                  onChange={setEditForm}
+                  onSave={() => handleSave()}
+                  onCancel={() => { setIsAdding(false); setEditForm({}); }}
                 />
               </motion.div>
             )}
@@ -132,11 +173,11 @@ export const AdminDashboard: React.FC = () => {
               className="glass-card p-6 rounded-3xl border border-white/10 group hover:border-white/20 transition-all"
             >
               {editingId === project.id ? (
-                <ProjectForm 
-                  form={editForm} 
-                  onChange={setEditForm} 
-                  onSave={() => handleSave(project.id)} 
-                  onCancel={() => setEditingId(null)} 
+                <ProjectForm
+                  form={editForm}
+                  onChange={setEditForm}
+                  onSave={() => handleSave(project.id)}
+                  onCancel={() => setEditingId(null)}
                 />
               ) : (
                 <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -158,9 +199,9 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <p className="text-white/50 text-sm mb-4 line-clamp-2">{project.description}</p>
                     <div className="flex items-center gap-4">
-                      <a 
-                        href={project.link} 
-                        target="_blank" 
+                      <a
+                        href={project.link}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-cyan-400 text-xs flex items-center gap-1 hover:underline"
                       >

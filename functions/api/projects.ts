@@ -1,5 +1,5 @@
 import { parse } from 'cookie';
-import * as jose from 'jose';
+import { verifyAccessToken } from '../utils/refreshToken';
 
 interface Env {
   DB: KVNamespace;
@@ -38,7 +38,7 @@ const INITIAL_PROJECTS = [
     id: 4,
     title: "Project D - 语枢 AI 备课助手",
     category: "EdTech",
-    description: "告别“深夜备课”！语枢 AI：让每一堂语文课都充满智慧与灵感。一款专为中国语文教育者打造的生产力工具——语枢 AI (Yushu AI)。",
+    description: "告别"深夜备课"！语枢 AI：让每一堂语文课都充满智慧与灵感。一款专为中国语文教育者打造的生产力工具——语枢 AI (Yushu AI)。",
     gradient: "from-emerald-900 to-teal-900",
     link: "https://aiyushu.de5.net",
     image: "https://img.qianmo.de5.net/PicGo/QQ20260212-151210.gif"
@@ -47,7 +47,7 @@ const INITIAL_PROJECTS = [
     id: 5,
     title: "Project E - 语之笔写作辅导",
     category: "AI Education",
-    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学语文设计的“过程性写作”智能辅导系统。",
+    description: "以科技研墨，让每一篇习作都意蕴悠长。首款专为中小学语文设计的"过程性写作"智能辅导系统。",
     gradient: "from-amber-900 to-orange-900",
     link: "https://yuzhibi.de5.net",
     image: "https://img.qianmo.de5.net/PicGo/QQ20260211-093033.gif"
@@ -81,18 +81,13 @@ async function getProjects(db: KVNamespace) {
   return JSON.parse(data);
 }
 
-async function verifyAuth(request: Request, secret: string) {
+/** Verify access token using the shared utility */
+async function verifyAuth(request: Request, secret: string): Promise<boolean> {
   const cookieHeader = request.headers.get('Cookie') || '';
   const cookies = parse(cookieHeader);
   const token = cookies.token;
   if (!token) return false;
-  try {
-    const key = new TextEncoder().encode(secret);
-    await jose.jwtVerify(token, key);
-    return true;
-  } catch {
-    return false;
-  }
+  return (await verifyAccessToken(token, secret)) !== null;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -104,14 +99,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
-  if (!await verifyAuth(request, env.JWT_SECRET)) return new Response('Unauthorized', { status: 401 });
+  if (!await verifyAuth(request, env.JWT_SECRET)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
 
   const projects = await getProjects(env.DB);
-  const newProject = await request.json() as any;
+  const newProject = await request.json() as Record<string, unknown>;
   newProject.id = Date.now();
   projects.push(newProject);
   await env.DB.put('projects', JSON.stringify(projects));
-  
+
   return new Response(JSON.stringify(newProject), {
     headers: { 'Content-Type': 'application/json' }
   });
