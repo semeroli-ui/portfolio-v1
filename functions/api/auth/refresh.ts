@@ -46,8 +46,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return new Response(JSON.stringify({ error: 'Token revoked or expired' }), { status: 401 });
   }
 
-  const accessCookie = buildCookie('token', newTokens.accessToken, { maxAge: 3600 });
-  const refreshCookie = buildCookie('refresh_token', newTokens.newRefreshToken, { maxAge: 7 * 24 * 3600 });
+  const isSecure = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
+  const accessCookie = buildCookie('token', newTokens.accessToken, { maxAge: 3600 }, isSecure);
+  const refreshCookie = buildCookie('refresh_token', newTokens.newRefreshToken, { maxAge: 7 * 24 * 3600 }, isSecure);
 
   return new Response(JSON.stringify({ success: true }), {
     headers: {
