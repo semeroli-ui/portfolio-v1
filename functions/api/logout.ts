@@ -6,11 +6,11 @@ interface Env {
   DB: KVNamespace;
 }
 
-function clearCookie(name: string): string {
+function clearCookie(name: string, isSecure: boolean): string {
   return serialize(name, '', {
     httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
+    secure: isSecure,
+    sameSite: isSecure ? 'strict' : 'lax',
     maxAge: 0,
     path: '/',
   });
@@ -33,12 +33,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     await revokeRefreshToken(refreshToken, env.DB);
   }
 
+  const isSecure = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
+
   return new Response(JSON.stringify({ success: true }), {
     headers: {
       'Content-Type': 'application/json',
       'Set-Cookie': [
-        clearCookie('token'),
-        clearCookie('refresh_token'),
+        clearCookie('token', isSecure),
+        clearCookie('refresh_token', isSecure),
       ].join(', '),
     },
   });
