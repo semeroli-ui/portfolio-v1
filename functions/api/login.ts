@@ -97,8 +97,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
   }
 
-  const accessCookie = buildCookie('token', tokens.accessToken, { maxAge: 3600 });          // 1h
-  const refreshCookie = buildCookie('refresh_token', tokens.refreshToken, { maxAge: 7 * 24 * 3600 }); // 7d
+  // Detect if request is HTTPS (for cookie secure flag)
+  const isSecure = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
+  const accessCookie = buildCookie('token', tokens.accessToken, { maxAge: 3600 }, isSecure);          // 1h
+  const refreshCookie = buildCookie('refresh_token', tokens.refreshToken, { maxAge: 7 * 24 * 3600 }, isSecure); // 7d
 
   return new Response(JSON.stringify({ success: true, remaining: rl.remaining }), {
     headers: {
