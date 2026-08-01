@@ -93,7 +93,7 @@ export function buildCookie(
   return serialize(name, value, {
     httpOnly: options.httpOnly ?? true,
     secure: isSecure, // Only secure on HTTPS
-    sameSite: isSecure ? 'strict' : 'lax', // lax allows HTTP, strict requires HTTPS
+    sameSite: 'lax', // lax works on both HTTP and HTTPS, allows top-level navigation
     maxAge: options.maxAge,
     path: options.path ?? '/',
   });
