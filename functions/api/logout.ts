@@ -35,10 +35,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const isSecure = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
 
+  const responseHeaders = new Headers();
+  responseHeaders.set('Content-Type', 'application/json');
+  responseHeaders.append('Set-Cookie', clearCookie('token', isSecure));
+  responseHeaders.append('Set-Cookie', clearCookie('refresh_token', isSecure));
   return new Response(JSON.stringify({ success: true }), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': `${clearCookie('token', isSecure)}\n${clearCookie('refresh_token', isSecure)}`,
-    },
+    headers: responseHeaders,
   });
 };
