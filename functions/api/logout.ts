@@ -41,7 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       'Set-Cookie': [
         clearCookie('token', isSecure),
         clearCookie('refresh_token', isSecure),
-      ].join(', '),
+      ],
     },
   });
 };
