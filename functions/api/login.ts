@@ -105,7 +105,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return new Response(JSON.stringify({ success: true, remaining: rl.remaining }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': [accessCookie, refreshCookie],
+      'Set-Cookie': `${accessCookie}\n${refreshCookie}`,
     },
   });
 };
