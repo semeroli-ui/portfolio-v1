@@ -38,10 +38,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return new Response(JSON.stringify({ success: true }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': [
-        clearCookie('token', isSecure),
-        clearCookie('refresh_token', isSecure),
-      ],
+      'Set-Cookie': `${clearCookie('token', isSecure)}\n${clearCookie('refresh_token', isSecure)}`,
     },
   });
 };
