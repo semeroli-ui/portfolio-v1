@@ -50,10 +50,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const accessCookie = buildCookie('token', newTokens.accessToken, { maxAge: 3600 }, isSecure);
   const refreshCookie = buildCookie('refresh_token', newTokens.newRefreshToken, { maxAge: 7 * 24 * 3600 }, isSecure);
 
+  const responseHeaders = new Headers();
+  responseHeaders.set('Content-Type', 'application/json');
+  responseHeaders.append('Set-Cookie', accessCookie);
+  responseHeaders.append('Set-Cookie', refreshCookie);
   return new Response(JSON.stringify({ success: true }), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': `${accessCookie}\n${refreshCookie}`,
-    },
+    headers: responseHeaders,
   });
 };
