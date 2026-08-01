@@ -10,7 +10,7 @@ function clearCookie(name: string, isSecure: boolean): string {
   return serialize(name, '', {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'strict' : 'lax',
+    sameSite: 'lax',
     maxAge: 0,
     path: '/',
   });
