@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   return new Response(JSON.stringify({ success: true }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': [accessCookie, refreshCookie].join(', '),
+      'Set-Cookie': [accessCookie, refreshCookie],
     },
   });
 };
