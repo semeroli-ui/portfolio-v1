@@ -102,10 +102,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const accessCookie = buildCookie('token', tokens.accessToken, { maxAge: 3600 }, isSecure);          // 1h
   const refreshCookie = buildCookie('refresh_token', tokens.refreshToken, { maxAge: 7 * 24 * 3600 }, isSecure); // 7d
 
+  const responseHeaders = new Headers();
+  responseHeaders.set('Content-Type', 'application/json');
+  responseHeaders.append('Set-Cookie', accessCookie);
+  responseHeaders.append('Set-Cookie', refreshCookie);
   return new Response(JSON.stringify({ success: true, remaining: rl.remaining }), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': `${accessCookie}\n${refreshCookie}`,
-    },
+    headers: responseHeaders,
   });
 };
