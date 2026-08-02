@@ -23,8 +23,14 @@ export const AdminDashboard: React.FC = () => {
       try {
         const res = await fetch('/api/auth/refresh', { method: 'POST' });
         if (!res.ok) {
-          // Refresh token invalid or expired → force re-login
-          navigate('/login');
+          // Refresh failed. Before forcing logout, confirm the access token
+          // is actually gone (it stays valid 1h). Avoids spurious logouts.
+          try {
+            const check = await fetch('/api/auth/check');
+            if (!check.ok) navigate('/login');
+          } catch {
+            navigate('/login');
+          }
         }
       } catch {
         // Network error – don't force logout; next request will catch it
