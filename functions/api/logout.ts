@@ -4,6 +4,7 @@ import { revokeRefreshToken } from '../utils/refreshToken';
 
 interface Env {
   DB: KVNamespace;
+  JWT_SECRET: string;
 }
 
 function clearCookie(name: string, isSecure: boolean): string {
@@ -30,7 +31,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const refreshToken = cookies.refresh_token;
 
   if (refreshToken) {
-    await revokeRefreshToken(refreshToken, env.DB);
+    await revokeRefreshToken(refreshToken, env.JWT_SECRET, env.DB);
   }
 
   const isSecure = request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https://');
