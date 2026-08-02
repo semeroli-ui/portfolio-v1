@@ -88,7 +88,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // ── 5. Issue token pair ────────────────────────────────────────────
   let tokens: { accessToken: string; refreshToken: string };
   try {
-    tokens = await issueTokenPair(username, env.JWT_SECRET, env.DB);
+    tokens = await issueTokenPair(username, env.JWT_SECRET);
   } catch (err) {
     console.error('[login] Token issuance error:', err);
     return new Response(JSON.stringify({ error: '认证服务异常' }), {
