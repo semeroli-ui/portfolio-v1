@@ -1,11 +1,14 @@
 /**
- * Refresh token utility.
+ * Token utilities — JWT-based access + refresh tokens.
  *
- * Implements a rotation-based refresh token scheme:
- *  - Refresh token is a long-lived (7 days) random token stored in KV
- *  - Access token is short-lived (1 hour)
- *  - Each use rotates the refresh token (old one invalidated → new one issued)
- *  - This detects token theft via reuse detection
+ * Refresh tokens are self-contained signed JWTs (7-day expiry) and do NOT
+ * require a KV lookup to validate. This avoids Cloudflare KV's eventual
+ * consistency issues that previously caused random logouts when requests
+ * hit different edge nodes.
+ *
+ * Revocation (logout) uses a small KV blacklist keyed by the token's `jti`.
+ * The blacklist check is fail-open: if KV is temporarily unavailable the
+ * refresh is still allowed, so we never log a user out due to KV lag.
  */
 
 import * as jose from 'jose';
@@ -16,65 +19,81 @@ interface TokenPair {
   refreshToken: string;
 }
 
-/** Generate cryptographically secure random token */
-function generateToken(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** Issue a new access token + refresh token pair */
+/** Issue a new access token + refresh token pair (no KV write needed) */
 export async function issueTokenPair(
   username: string,
-  jwtSecret: string,
-  namespace: KVNamespace
+  jwtSecret: string
 ): Promise<TokenPair> {
-  const refreshToken = generateToken();
-  const now = Math.floor(Date.now() / 1000);
+  const secret = new TextEncoder().encode(jwtSecret);
 
   // Access token: 1 hour
-  const accessSecret = new TextEncoder().encode(jwtSecret);
   const accessToken = await new jose.SignJWT({ username, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('1h')
-    .sign(accessSecret);
+    .sign(secret);
 
-  // Refresh token: 7 days, stored in KV
-  await namespace.put(`rt:${refreshToken}`, JSON.stringify({
-    username,
-    createdAt: now,
-    lastUsed: now,
-  }), { expirationTtl: 7 * 24 * 60 * 60 });
+  // Refresh token: 7 days, self-contained (carries its own jti for revocation)
+  const refreshToken = await new jose.SignJWT({ username, type: 'refresh' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setJti(generateJti())
+    .setExpirationTime('7d')
+    .sign(secret);
 
   return { accessToken, refreshToken };
 }
 
-/** Verify refresh token and rotate: returns new access token, or null if invalid */
+/** Verify refresh token and issue a new pair. Returns null if invalid/revoked. */
 export async function rotateRefreshToken(
   refreshToken: string,
   jwtSecret: string,
-  namespace: KVNamespace
+  namespace?: KVNamespace
 ): Promise<{ accessToken: string; newRefreshToken: string } | null> {
-  const stored = await namespace.get(`rt:${refreshToken}`, 'json') as {
-    username: string;
-    createdAt: number;
-    lastUsed: number;
-  } | null;
+  const payload = await verifyRefreshToken(refreshToken, jwtSecret);
+  if (!payload) return null;
 
-  if (!stored) return null; // Token not found or already invalidated
+  // Revocation check (fail-open: never log out due to KV lag)
+  if (namespace && payload.jti) {
+    try {
+      const revoked = await namespace.get(`revoked:${payload.jti}`);
+      if (revoked) return null;
+    } catch {
+      // KV error — fail open
+    }
+  }
 
-  // Rotate: invalidate old refresh token, issue new pair
-  await namespace.delete(`rt:${refreshToken}`);
-  return issueTokenPair(stored.username, jwtSecret, namespace);
+  const pair = await issueTokenPair(payload.username as string, jwtSecret);
+  return { accessToken: pair.accessToken, newRefreshToken: pair.refreshToken };
 }
 
-/** Invalidate a refresh token (logout) */
+/** Verify a refresh token JWT, returns payload or null. */
+export async function verifyRefreshToken(
+  refreshToken: string,
+  jwtSecret: string
+): Promise<jose.JWTPayload | null> {
+  try {
+    const secret = new TextEncoder().encode(jwtSecret);
+    const { payload } = await jose.jwtVerify(refreshToken, secret);
+    if (payload.type !== 'refresh') return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Add a refresh token's jti to the revocation blacklist (logout). */
 export async function revokeRefreshToken(
   refreshToken: string,
+  jwtSecret: string,
   namespace: KVNamespace
 ): Promise<void> {
-  await namespace.delete(`rt:${refreshToken}`);
+  const payload = await verifyRefreshToken(refreshToken, jwtSecret);
+  if (!payload || !payload.jti) return;
+  // Blacklist for slightly longer than the token's max lifetime
+  await namespace.put(`revoked:${payload.jti}`, '1', {
+    expirationTtl: 8 * 24 * 60 * 60,
+  });
 }
 
 /** Build httpOnly cookie string for a token */
@@ -92,8 +111,8 @@ export function buildCookie(
 ): string {
   return serialize(name, value, {
     httpOnly: options.httpOnly ?? true,
-    secure: isSecure, // Only secure on HTTPS
-    sameSite: 'lax', // lax works on both HTTP and HTTPS, allows top-level navigation
+    secure: isSecure,
+    sameSite: 'lax',
     maxAge: options.maxAge,
     path: options.path ?? '/',
   });
@@ -112,4 +131,11 @@ export async function verifyAccessToken(
   } catch {
     return null;
   }
+}
+
+/** Cryptographically secure random jti */
+function generateJti(): string {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
 }
